@@ -84,11 +84,14 @@ class FleeceApp(connexion.App):
         try:
             environ = _build_wsgi_env(event, self.import_name)
             response = werkzeug.wrappers.Response.from_app(self, environ)
+            self.logger.info('Fleece response: %s', response)
             response_dict = json.loads(response.get_data())
+            self.logger.info('Fleece response dict: %s', response_dict)
 
             if 400 <= response.status_code < 500:
-                if ('error' in response_dict and
-                        'message' in response_dict['error']):
+                self.logger.info('Fleece response code is between 400 and 500.')
+                if ('error' in response_dict and 'message' in response_dict['error']):
+                    self.logger.info('error and message in response dict')
                     # FIXME(larsbutler): If 'error' is not a collection
                     # (list/dict) and is a scalar such as an int, the check
                     # `message in response_dict['error']` will blow up and
@@ -98,6 +101,7 @@ class FleeceApp(connexion.App):
                     # support custom structures.
                     msg = response_dict['error']['message']
                 elif 'detail' in response_dict:
+                    self.logger.info('detail is in response_dict')
                     # Likely this is a generated 400 response from Connexion.
                     # Reveal the 'detail' of the message to the user.
                     # NOTE(larsbutler): If your API handler explicitly returns
@@ -105,6 +109,7 @@ class FleeceApp(connexion.App):
                     # will be exposed to the client.
                     msg = response_dict['detail']
                 else:
+                    self.logger.info('some other thing in response dict')
                     # Respond with a generic client error.
                     msg = 'Client Error'
                 # FIXME(larsbutler): The logic above still assumes a lot about
@@ -120,6 +125,7 @@ class FleeceApp(connexion.App):
                     message=msg,
                 )
             elif 500 <= response.status_code < 600:
+                self.logger.info('Fleece response code is between 500 and 600.')
                 if response_dict['title'] == RESPONSE_CONTRACT_VIOLATION:
                     # This case is generally enountered if the API endpoint
                     # handler code does not conform to the contract dictated by
@@ -140,6 +146,7 @@ class FleeceApp(connexion.App):
                     )
                 raise httperror.HTTPError(status=response.status_code)
             else:
+                self.logger.info('Fleece response code is something else.')
                 return response_dict
         except httperror.HTTPError:
             self.logger.exception('HTTPError')
